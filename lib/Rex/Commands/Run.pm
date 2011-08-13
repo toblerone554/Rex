@@ -38,7 +38,11 @@ use Rex::Helper::SSH2;
 use Rex::Helper::SSH2::Expect;
 use Rex::Config;
 
-use Expect;
+BEGIN {
+   if($^O !~ m/^MSWin/) {
+      eval "use Expect;";
+   }
+}
 
 use vars qw(@EXPORT);
 use base qw(Exporter);
@@ -66,7 +70,12 @@ sub run {
    if(my $ssh = Rex::is_ssh()) {
       $out = net_ssh2_exec($ssh, "LC_ALL=C " . $cmd);
    } else {
-      $out = qx{LC_ALL=C $cmd};
+      if($^O =~ m/^MSWin/) {
+         $out = qx{$cmd};
+      }
+      else {
+         $out = qx{LC_ALL=C $cmd};
+      }
    }
 
    Rex::Logger::debug($out);
@@ -125,6 +134,9 @@ sub sudo {
       $exp = Rex::Helper::SSH2::Expect->new($ssh);
    }
    else {
+      if($^O =~ m/^MSWin/) {
+         die("sudo not available for windows");
+      }
       $exp = Expect->new();
    }
 
