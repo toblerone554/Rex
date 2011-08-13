@@ -157,7 +157,7 @@ sub sudo {
                                           $exp->send($sudo_password . "\n");
 
                                           unless(ref($exp) eq "Rex::Helper::SSH2::Expect") {
-                                             exp_continue;
+                                             exp_continue();
                                           }
                                        },
                           ]);
