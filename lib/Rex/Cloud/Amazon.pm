@@ -36,9 +36,11 @@ sub new {
    bless($self, $proto);
 
    #$self->{"__version"} = "2009-11-30";
-   $self->{"__version"} = "2011-05-15";
+   #$self->{"__version"} = "2011-05-15";
+   $self->{"__version"} = "2011-11-15";
    $self->{"__signature_version"} = 1;
    $self->{"__endpoint"} = "us-east-1.ec2.amazonaws.com";
+   #$self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
 
    Rex::Logger::debug("Creating new Amazon Object, with endpoint: " . $self->{"__endpoint"});
    Rex::Logger::debug("Using API Version: " . $self->{"__version"});
@@ -284,6 +286,29 @@ sub get_availability_zones {
    return @zones;
 }
 
+sub get_loadbalancer {
+   my ($self) = @_;
+
+   $self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
+   my $xml = $self->_request("DescribeLoadBalancers");
+   my $ret = $self->_xml($xml);
+}
+
+sub create_loadbalancer {
+   my ($self, %option) = @_;
+   
+   $self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
+   my $xml = $self->_request("CreateLoadBalancer",
+      "Listeners.Member.1.InstancePort" => $option{port},
+      "Listeners.Member.1.LoadBalancerPort" => $option{port},
+      "Listeners.Member.1.Protocol" => $option{protocol} || "HTTP",
+      "Listeners.Member.1.InstanceProtocol" => $option{protocol} || "HTTP",
+      "LoadBalancerName" => $option{name},
+      "AvailabilityZones.Member.1" => $option{zone},
+   );
+   my $ret = $self->_xml($xml);
+}
+
 sub _request {
    my ($self, $action, %args) = @_;
 
@@ -368,6 +393,14 @@ sub _xml {
    my ($self, $xml) = @_;
 
    my $x = XML::Simple->new;
+
+   print "-"x80;
+   print "\n";
+   print $xml;
+   print "\n";
+   print "-"x80;
+   print "\n";
+
    my $res = $x->XMLin($xml);
    if(defined $res->{"Errors"}) {
       if(ref($res->{"Errors"}) ne "ARRAY") {

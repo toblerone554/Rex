@@ -68,7 +68,8 @@ use Rex::Cloud;
                cloud_service cloud_auth cloud_region 
                get_cloud_instances_as_group get_cloud_regions get_cloud_availability_zones
                get_cloud_plans
-               get_cloud_operating_systems);
+               get_cloud_operating_systems
+               get_cloud_loadbalancer cloud_loadbalancer);
 
 Rex::Config->register_set_handler("cloud" => sub {
    my ($name, @options) = @_;
@@ -445,6 +446,28 @@ sub get_cloud_operating_systems {
    $cloud->set_endpoint($cloud_region);
 
    return $cloud->list_operating_systems;
+}
+
+sub get_cloud_loadbalancer {
+   my $cloud = get_cloud_service($cloud_service);
+
+   $cloud->set_auth($access_key, $secret_access_key);
+   $cloud->set_endpoint($cloud_region);
+
+   return $cloud->get_loadbalancer;
+}
+
+sub cloud_loadbalancer {
+   my ($action, $option) = @_;
+
+   my $cloud = get_cloud_service($cloud_service);
+
+   $cloud->set_auth($access_key, $secret_access_key);
+   $cloud->set_endpoint($cloud_region);
+
+   if($action eq "create") {
+      return $cloud->create_loadbalancer(%{ $option });
+   }
 }
 
 =back
