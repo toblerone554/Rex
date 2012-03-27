@@ -39,8 +39,10 @@ sub new {
    #$self->{"__version"} = "2011-05-15";
    $self->{"__version"} = "2011-11-15";
    $self->{"__signature_version"} = 1;
-   $self->{"__endpoint"} = "us-east-1.ec2.amazonaws.com";
-   #$self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
+   $self->{"__endpoint"} = {
+                              ec2 => "us-east-1.ec2.amazonaws.com",
+                              loadbalancer => "elasticloadbalancing.us-east-1.amazonaws.com",
+                           };
 
    Rex::Logger::debug("Creating new Amazon Object, with endpoint: " . $self->{"__endpoint"});
    Rex::Logger::debug("Using API Version: " . $self->{"__version"});
@@ -58,7 +60,14 @@ sub set_auth {
 sub set_endpoint {
    my ($self, $endpoint) = @_;
    Rex::Logger::debug("Setting new endpoint to $endpoint");
-   $self->{'__endpoint'} = $endpoint;
+   if(! ref($endpoint)) {
+      $self->{'__endpoint'} = {
+         ec2 => $endpoint,
+      };
+   }
+   else {
+      $self->{'__endpoint'} = $endpoint;
+   }
 }
 
 sub timestamp {
@@ -289,16 +298,15 @@ sub get_availability_zones {
 sub get_loadbalancer {
    my ($self) = @_;
 
-   $self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
-   my $xml = $self->_request("DescribeLoadBalancers");
+   my $xml = $self->_request("DescribeLoadBalancers", __type => "loadbalancer");
    my $ret = $self->_xml($xml);
 }
 
 sub create_loadbalancer {
    my ($self, %option) = @_;
    
-   $self->{"__endpoint"} = "elasticloadbalancing.eu-west-1.amazonaws.com";
    my $xml = $self->_request("CreateLoadBalancer",
+      __type => "loadbalancer",
       "Listeners.Member.1.InstancePort" => $option{port},
       "Listeners.Member.1.LoadBalancerPort" => $option{port},
       "Listeners.Member.1.Protocol" => $option{protocol} || "HTTP",
@@ -314,11 +322,13 @@ sub _request {
 
    my $ua = LWP::UserAgent->new;
    my %param = $self->_sign($action, %args);
+   $args{"__type"} ||= "ec2";
 
-   Rex::Logger::debug("Sending request to: http://" . $self->{'__endpoint'});
+   my $ep = $self->{"__endpoint"}->{$args{"__type"}};
+   Rex::Logger::debug("Sending request to: http://" . $ep);
    Rex::Logger::debug("   $_ -> " . $param{$_}) for keys %param;
 
-   my $res = $ua->post("http://" . $self->{'__endpoint'}, \%param);
+   my $res = $ua->post("http://$ep", \%param);
 
    if($res->code >= 500) {
       Rex::Logger::info("Error on request");
