@@ -273,6 +273,11 @@ sub is_https {
    return ($self->{"connection_type"} && lc($self->{"connection_type"}) eq "https");
 }
 
+sub is_sshany {
+   my ($self) = @_;
+   return ($self->{"connection_type"} && lc($self->{"connection_type"}) eq "sshany");
+}
+
 
 =item want_connect
 
@@ -305,6 +310,9 @@ sub get_connection_type {
    }
    elsif($self->is_https) {
       return "HTTPS";
+   }
+   elsif($self->is_sshany) {
+      return "SSHAny";
    }
    elsif($self->is_remote && $self->want_connect) {
       return "SSH";
