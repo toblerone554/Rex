@@ -515,6 +515,26 @@ sub set_parallelism {
    $self->{parallelism} = $para;
 }
 
+sub build_connect_hash {
+   my ($self, $server) = @_;
+
+   my $user = $self->user;
+   my $password = $self->password;
+   my $public_key = "";
+   my $private_key = "";
+
+   #print Dumper($self);
+   my $auth = $self->merge_auth($server);
+
+   Rex::Logger::debug(Dumper($auth));
+
+   # task specific auth rules over all
+   my %connect_hash = %{ $auth };
+   $connect_hash{server} = $server;
+
+   return %connect_hash;
+}
+
 =item connect($server)
 
 Initiate the connection to $server.
@@ -528,21 +548,9 @@ sub connect {
    }
    $self->{current_server} = $server;
 
-   my $user = $self->user;
-   my $password = $self->password;
-   my $public_key = "";
-   my $private_key = "";
-
-   #print Dumper($self);
-   my $auth = $self->merge_auth($server);
-
-   Rex::Logger::debug(Dumper($auth));
-
    my $profiler = Rex::Profiler->new;
 
-   # task specific auth rules over all
-   my %connect_hash = %{ $auth };
-   $connect_hash{server} = $server;
+   my %connect_hash = $self->build_connect_hash($server);
 
    $profiler->start("connect");
       $self->connection->connect(%connect_hash);
