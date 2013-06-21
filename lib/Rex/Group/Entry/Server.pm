@@ -114,6 +114,10 @@ sub has_auth {
 sub set_auth {
    my ($self, %auth) = @_;
    $self->{auth} = \%auth;
+
+   if(! exists $self->{auth}->{auth_type}) {
+      $self->{auth}->{auth_type} = "try";
+   }
 }
 
 sub get_auth {
@@ -183,15 +187,15 @@ sub get_auth_type {
       return $self->{auth}->{auth_type};
    }
 
-   if(exists $self->{auth}->{public_key} &&  -f $self->{auth}->{public_key}
-         && exists $self->{auth}->{private_key} &&  -f $self->{auth}->{private_key}) {
-      return "try";
-   }
-   elsif(exists $self->{auth}->{user} && $self->{auth}->{user}
-         && exists $self->{auth}->{password} && $self->{auth}->{password} ne "") {
-      return "try";
-   }
-   elsif(Rex::Config->get_krb5_auth) {
+#   if(exists $self->{auth}->{public_key} &&  -f $self->{auth}->{public_key}
+#         && exists $self->{auth}->{private_key} &&  -f $self->{auth}->{private_key}) {
+#      return "try";
+#   }
+#   elsif(exists $self->{auth}->{user} && $self->{auth}->{user}
+#         && exists $self->{auth}->{password} && $self->{auth}->{password} ne "" && ! Rex::Config->get_password_auth) {
+#      return "try";
+#   }
+   if(Rex::Config->get_krb5_auth) {
       return "krb5";
    }
    elsif(Rex::Config->get_password_auth) {
@@ -244,7 +248,7 @@ sub merge_auth {
          $new_auth{$key} = $other_auth->{$key};
       }
    }
-
+#print STDERR Dumper(\%new_auth);
    # fixed bug: 176
    # use ssh_config information if no global username is set.
    if($new_auth{user} eq "{{default}}") {
@@ -257,7 +261,7 @@ sub merge_auth {
       }
    }
 
-   print Dumper(\%new_auth);
+   #print Dumper(\%new_auth);
 
    return %new_auth;
 }

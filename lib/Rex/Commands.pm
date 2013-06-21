@@ -462,6 +462,19 @@ sub auth {
       Rex::Logger::debug("Please remember that the default auth information/task auth information has precedence.");
       Rex::Logger::debug("If you want to overwrite this behaviour please use ,,use Rex -feature => 0.31;'' in your Rexfile.");
       Rex::Logger::debug("=================================================");
+
+      if(Rex::TaskList->create()->is_default_auth) {
+         $data{user}          = Rex::Config->get_user;
+         $data{password}      = Rex::Config->get_password      if Rex::Config->get_password;
+         $data{private_key}   = Rex::Config->get_private_key   if Rex::Config->get_private_key;
+         $data{public_key}    = Rex::Config->get_public_key    if Rex::Config->get_public_key;
+         $data{sudo}          = Rex->is_sudo                   if Rex->is_sudo;
+         $data{sudo_password} = Rex::Config->get_sudo_password if Rex::Config->get_sudo_password;
+         $data{auth_type}     = Rex::Config->get_password_auth ? "pass" 
+                                 : Rex::Config->get_key_auth ? "key"
+                                    : Rex::Config->get_krb5_auth ? "krb5"
+                                       : "try";
+      }
    }
 
    Rex::Logger::debug("Setting auth info for " . ref($group) . " $entity");

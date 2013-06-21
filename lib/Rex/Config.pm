@@ -48,7 +48,8 @@ our ($user, $password, $port,
             $source_global_profile,
             %executor_for,
             $allow_empty_groups,
-            $use_server_auth);
+            $use_server_auth,
+            $ssh_config_file);
 
 # some defaults
 %executor_for = (
@@ -354,7 +355,7 @@ sub get_ssh_config_private_key {
       my $file = $SSH_CONFIG_FOR{$param->{server}}->{identityfile};
       my $home_dir = _home_dir();
       $file =~ s/^~/$home_dir/;
-      
+
       return $file;
    }
 
@@ -553,10 +554,16 @@ sub read_config_file {
 
 sub read_ssh_config_file {
    my ($config_file) = @_;
-   $config_file ||= _home_dir() . '/.ssh/config';
+
+   if($config_file) {
+      $ssh_config_file = $config_file;
+   }
+
+   $ssh_config_file ||= _home_dir() . '/.ssh/config';
+   %SSH_CONFIG_FOR = ();
    
-   if(-f $config_file) {
-      my @lines = eval { local(@ARGV) = ($config_file); <>;  };
+   if(-f $ssh_config_file) {
+      my @lines = eval { local(@ARGV) = ($ssh_config_file); <>;  };
       %SSH_CONFIG_FOR = _parse_ssh_config(@lines);
    }
 }
