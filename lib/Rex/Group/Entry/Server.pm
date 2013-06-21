@@ -245,6 +245,20 @@ sub merge_auth {
       }
    }
 
+   # fixed bug: 176
+   # use ssh_config information if no global username is set.
+   if($new_auth{user} eq "{{default}}") {
+      if(Rex::Config->get_ssh_config_username(server => $self->to_s) ) {
+         Rex::Logger::debug("Found user for $self: " . Rex::Config->get_ssh_config_username(server => $self->to_s));
+         $new_auth{user} = Rex::Config->get_ssh_config_username(server => $self->to_s);
+      }
+      else {
+         $new_auth{user} = (getlogin || getpwuid($<) || "Kilroy");
+      }
+   }
+
+   print Dumper(\%new_auth);
+
    return %new_auth;
 }
 

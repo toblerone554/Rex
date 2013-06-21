@@ -160,8 +160,9 @@ sub get_user {
    if($user) {
       return $user;
    }
-
-   return getlogin || getpwuid($<) || "Kilroy";
+   
+   return '{{default}}';
+   #return getlogin || getpwuid($<) || "Kilroy";
 }
 
 sub get_password {
