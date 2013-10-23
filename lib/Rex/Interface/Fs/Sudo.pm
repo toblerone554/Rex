@@ -116,7 +116,6 @@ sub stat {
    my ($self, $file) = @_;
 
    my $script = q|
-   use Data::Dumper;
    if(my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size,
                $atime, $mtime, $ctime, $blksize, $blocks) = stat($ARGV[0])) {
 
@@ -129,18 +128,25 @@ sub stat {
          $ret{'atime'} = $atime;
          $ret{'mtime'} = $mtime;
 
-         print Dumper(\%ret);
+         for my $key (keys %ret) {
+            print "$key = $ret{$key}\n";
+         }
    }
 
    |;
 
    my $rnd_file = $self->_write_to_rnd_file($script);
    my $out = $self->_exec("perl $rnd_file '$file'");
-   $out =~ s/^\$VAR1 =/return /;
-   my $tmp = eval $out;
+
+   my %ret;
+   for my $line (split(/\n/, $out)) {
+      my ($key, $val) = split(/ = /, $line);
+      $ret{$key} = $val;
+   }
+
    $self->unlink($rnd_file);
 
-   return %{$tmp};
+   return %ret;
 }
 
 sub is_readable {
@@ -194,17 +200,20 @@ sub glob {
    my ($self, $glob) = @_;
 
    my $script = q|
-   use Data::Dumper;
-   print Dumper [ glob("| . $glob . q|") ];
+   my @ret = glob("| . $glob . q|");
+   for my $i (@ret) {
+      print "$i\n";
+   }
    |;
 
    my $rnd_file = $self->_write_to_rnd_file($script);
    my $content = $self->_exec("perl $rnd_file");
-   $content =~ s/^\$VAR1 =/return /;
-   my $tmp = eval $content;
+
+   my @ret = split(/\n/, $content);
+
    $self->unlink($rnd_file);
 
-   return @{$tmp};
+   return @ret;
 }
 
 sub _get_file_writer {
