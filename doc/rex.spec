@@ -20,6 +20,7 @@ BuildRequires: perl(ExtUtils::MakeMaker)
 Requires: perl-Net-SSH2
 Requires: perl-Expect
 Requires: perl-DBI
+Requires: perl
 Requires: perl >= 5.8.0
 Requires: rsync
 Requires: perl-libwww-perl
