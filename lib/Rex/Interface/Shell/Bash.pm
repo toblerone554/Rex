@@ -51,7 +51,12 @@ sub exec {
 
     if(my $env = $self->get_env) {
       for my $key (keys %{ $env }) {
-         $env_string .= "$key=$env->{$key} "
+         if(exists $option->{no_sh}) {
+            $env_string .= "$key=$env->{$key} "
+         }
+         else {
+            $env_string .= "$key=$env->{$key} ; export $key ; "
+         }
       }
     }
 
