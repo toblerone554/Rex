@@ -37,6 +37,10 @@ sub exec {
 
    $shell->set_locale("C");
    $shell->path($path);
+   
+   if(exists $option->{env}) {
+      $shell->set_env($option->{env});
+   }
 
    if(Rex::Config->get_source_global_profile) {
        $shell->source_global_profile(1);
@@ -62,6 +66,11 @@ sub exec {
    if(wantarray) { return ($out, $err); }
 
    return $out;
+}
+
+sub _get_env {
+   my ($self) = @_;
+
 }
 
 sub _exec {

@@ -47,55 +47,36 @@ sub exec {
       $self->path($option->{path});
     }
 
-    if(exists $option->{no_sh}) {
+    my $env_string = "";
 
-       if(exists $option->{cwd}) {
-           $option->{format_cmd} = "cd $option->{cwd} && $option->{format_cmd}";
-       }
-
-       if ($self->{path}) {
-           $option->{format_cmd} = "PATH=$self->{path}; export PATH; $option->{format_cmd} ";
-       }
-
-       if ($self->{locale} && ! exists $option->{no_locales}) {
-           $option->{format_cmd} = "LC_ALL=$self->{locale} ; export LC_ALL; $option->{format_cmd} ";
-       }
-
-       if ($self->{source_profile}) {
-           $option->{format_cmd} = ". ~/.profile >/dev/null 2>&1 ; $option->{format_cmd} ";
-       }
-
-
-       if ($self->{source_global_profile}) {
-           $option->{format_cmd} = ". /etc/profile >/dev/null 2>&1 ; $option->{format_cmd} ";
-       }
-
-    }
-    else {
-
-       if(exists $option->{cwd}) {
-         $complete_cmd = "cd $option->{cwd} && $complete_cmd";
-       }
-
-       if ($self->{path}) {
-           $complete_cmd = "PATH=$self->{path}; export PATH; $complete_cmd ";
-       }
-
-       if ($self->{locale} && ! exists $option->{no_locales}) {
-           $complete_cmd = "LC_ALL=$self->{locale} ; export LC_ALL; $complete_cmd ";
-       }
-
-       if ($self->{source_profile}) {
-           $complete_cmd = ". ~/.profile >/dev/null 2>&1 ; $complete_cmd";
-       }
-
-
-       if ($self->{source_global_profile}) {
-           $complete_cmd = ". /etc/profile >/dev/null 2>&1 ; $complete_cmd";
-       }
-
+    if(my $env = $self->get_env) {
+      for my $key (keys %{ $env }) {
+         $env_string .= "$key=$env->{$key} "
+      }
     }
 
+    my $prefix_cmd = "";
+
+    if(exists $option->{cwd}) {
+        $prefix_cmd = "cd $option->{cwd}; ";
+    }
+
+    if ($self->{path}) {
+        $prefix_cmd = "PATH=$self->{path}; export PATH; $prefix_cmd ";
+    }
+
+    if ($self->{locale} && ! exists $option->{no_locales}) {
+        $prefix_cmd = "LC_ALL=$self->{locale} ; export LC_ALL; $prefix_cmd ";
+    }
+
+    if ($self->{source_profile}) {
+        $prefix_cmd = ". ~/.profile >/dev/null 2>&1 ; $prefix_cmd ";
+    }
+
+
+    if ($self->{source_global_profile}) {
+        $prefix_cmd = ". /etc/profile >/dev/null 2>&1 ; $prefix_cmd ";
+    }
 
 # this is due to a strange behaviour with Net::SSH2 / libssh2
 # it may occur when you run rex inside a kvm virtualized host connecting to another virtualized vm on the same hardware
@@ -108,11 +89,23 @@ sub exec {
     }
 
     if(exists $option->{format_cmd}) {
+      $complete_cmd = "$env_string $complete_cmd";
       $option->{format_cmd} =~ s/{{CMD}}/$complete_cmd/;
       $complete_cmd = $option->{format_cmd};
+      $env_string = "";
     }
 
-    return $complete_cmd;
+    return "$prefix_cmd $env_string $complete_cmd";
+}
+
+sub set_env {
+   my ($self, $env) = @_;
+   $self->{__env__} = $env;
+}
+
+sub get_env {
+   my ($self) = @_;
+   return $self->{__env__};
 }
 
 1;
