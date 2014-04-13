@@ -73,8 +73,8 @@ sub report_resource_end {
 
 sub report_resource_failed {
   my ( $self, %opt ) = @_;
-  $self->{__reports__}->{__current_resource__}->{failed} = 1;
-  push @{ $self->{__reports__}->{__current_resource__}->{messages} },
+  $self->{__reports__}->{ $self->{__current_resource__} }->{failed} = 1;
+  push @{ $self->{__reports__}->{ $self->{__current_resource__} }->{messages} },
     $opt{message};
 }
 
