@@ -570,11 +570,11 @@ sub import {
         $found_feature = 1;
       }
 
-      if($add eq "reporting" || $add eq "report" || exists $ENV{REX_REPORT_TYPE}) {
-        Rex::Logger::debug("Enabling reporting");
+      #if($add eq "reporting" || $add eq "report" || exists $ENV{REX_REPORT_TYPE}) {
+      #  Rex::Logger::debug("Enabling reporting");
         Rex::Config->set_do_reporting(1);
-        $found_feature = 1;
-      }
+      #  $found_feature = 1;
+      #}
 
       if($add eq "source_profile") {
         Rex::Logger::debug("Enabling source_profile");

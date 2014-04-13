@@ -322,6 +322,12 @@ sub file {
     Rex::Logger::debug(
       "File already exists and no_overwrite option given. Doing nothing.");
     $__ret = { changed => 0 };
+
+    Rex::get_current_connection()->{reporter}->report(
+      changed => 0,
+      message =>
+        "File already exists and no_overwrite option given. Doing nothing."
+    );
   }
 
   elsif ( exists $option->{"content"} && !$is_directory ) {
@@ -330,11 +336,12 @@ sub file {
     # than we can decide if we need to replace the current (old) file.
 
     my @splitted_file = split( /\//, $file );
-    my $file_name = ".rex.tmp." . pop(@splitted_file);
-    my $tmp_file_name =
-      ( $#splitted_file != -1
+    my $file_name     = ".rex.tmp." . pop(@splitted_file);
+    my $tmp_file_name = (
+      $#splitted_file != -1
       ? ( join( "/", @splitted_file ) . "/" . $file_name )
-      : $file_name );
+      : $file_name
+    );
 
     my $fh = file_write($tmp_file_name);
     my @lines = split( qr{$/}, $option->{"content"} );
@@ -354,6 +361,12 @@ sub file {
       # md5 sums are the same, delete tmp.
       $fs->unlink($tmp_file_name);
       $need_md5 = 0;    # we don't need to execute on_change hook
+
+      Rex::get_current_connection()->{reporter}->report(
+        changed => 0,
+        message =>
+          "No need to overwrite exiting file. Old and new files are the same. $old_md5 eq $new_md5."
+      );
     }
     else {
       $old_md5 ||= "";
@@ -367,6 +380,11 @@ sub file {
 
       $fs->rename( $tmp_file_name, $file );
       $__ret = { changed => 1 };
+
+      Rex::get_current_connection()->{reporter}->report(
+        changed => 1,
+        message => "File updated. old md5: $old_md5, new md5: $new_md5"
+      );
 
       #### check and run after_change hook
       Rex::Hook::run_hook( file => "after_change", @_, $__ret );
@@ -396,6 +414,11 @@ sub file {
         $fh->close;
         $__ret = { changed => 1 };
 
+        Rex::get_current_connection()->{reporter}->report(
+          changed => 1,
+          message => "file is now present, with no content",
+        );
+
         #### check and run after_change hook
         Rex::Hook::run_hook( file => "after_change", @_, $__ret );
         ##############################
@@ -403,6 +426,7 @@ sub file {
       }
       else {
         $__ret = { changed => 0 };
+        Rex::get_current_connection()->{reporter}->report( changed => 0, );
       }
     }
     elsif ( $option->{ensure} eq "absent" ) {
@@ -418,13 +442,22 @@ sub file {
       if ( $fs->is_file($file) ) {
         $fs->unlink($file);
         $__ret = { changed => 1 };
+        Rex::get_current_connection()->{reporter}->report(
+          changed => 1,
+          message => "File removed."
+        );
       }
       elsif ( $fs->is_dir($file) ) {
         $fs->rmdir($file);
         $__ret = { changed => 1 };
+        Rex::get_current_connection()->{reporter}->report(
+          changed => 1,
+          message => "Directory removed.",
+        );
       }
       else {
         $__ret = { changed => 0 };
+        Rex::get_current_connection()->{reporter}->report( changed => 0, );
       }
 
       #### check and run after_change hook
@@ -461,6 +494,11 @@ sub file {
       $fh->write("");
       $fh->close;
 
+      Rex::get_current_connection()->{reporter}->report(
+        changed => 1,
+        message => "file is now present, with no content",
+      );
+
       #### check and run after_change hook
       Rex::Hook::run_hook( file => "after_change", @_, $__ret );
       ##############################
@@ -471,6 +509,8 @@ sub file {
   if ($need_md5) {
     eval { $new_md5 = md5($file); };
   }
+
+  my %stat_old = $fs->stat($file);
 
   if ( exists $option->{"mode"} ) {
     $fs->chmod( $option->{"mode"}, $file );
@@ -484,6 +524,30 @@ sub file {
     $fs->chown( $option->{"owner"}, $file );
   }
 
+  my %stat_new = $fs->stat($file);
+
+  if ( $stat_old{mode} ne $stat_new{mode} ) {
+    Rex::get_current_connection()->{reporter}->report(
+      changed => 1,
+      message =>
+        "File-System permissions changed from $stat_old{mode} to $stat_new{mode}.",
+    );
+  }
+
+  if ( $stat_old{uid} ne $stat_new{uid} ) {
+    Rex::get_current_connection()->{reporter}->report(
+      changed => 1,
+      message => "Owner changed from $stat_old{uid} to $stat_new{uid}.",
+    );
+  }
+
+  if ( $stat_old{gid} ne $stat_new{gid} ) {
+    Rex::get_current_connection()->{reporter}->report(
+      changed => 1,
+      message => "Group changed from $stat_old{gid} to $stat_new{gid}.",
+    );
+  }
+
   if ($need_md5) {
     unless ( $old_md5 && $new_md5 && $old_md5 eq $new_md5 ) {
       $old_md5 ||= "";
@@ -495,7 +559,12 @@ sub file {
 
       &$on_change($file);
 
-      return { changed => 1 };
+      Rex::get_current_connection()->{reporter}->report(
+        changed => 1,
+        message => "Content changed.",
+      );
+
+      $__ret = { changed => 1 };
     }
   }
 
@@ -503,9 +572,10 @@ sub file {
   Rex::Hook::run_hook( file => "after", @_, $__ret );
   ##############################
 
-  Rex::get_current_connection()->{reporter}->report_resource_end("file");
+  Rex::get_current_connection()->{reporter}
+    ->report_resource_end( type => "file", name => $file );
 
-  return $__ret;
+  return $__ret->{changed};
 }
 
 =item file_write($file_name)
